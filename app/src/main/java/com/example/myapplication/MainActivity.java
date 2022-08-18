@@ -1,6 +1,7 @@
 package com.example.myapplication;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ProgressDialog;
@@ -24,12 +25,13 @@ import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.annotations.Nullable;
 import com.google.firebase.storage.FileDownloadTask;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
@@ -68,45 +70,71 @@ public class MainActivity extends AppCompatActivity {
         lv = findViewById(R.id.listview);
         customListView myAdapter = new customListView(temp);
         lv.setAdapter(myAdapter);
-        for (int i = 1; i < 6; i++) {
-            storageReference = FirebaseStorage.getInstance().getReference("images/drug"+i);
+        DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child("data1");
+        reference.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
+                    //data d =
+                    String pr= snapshot.child("name").getValue().toString();
+                    Toast.makeText(getApplicationContext(), pr, Toast.LENGTH_SHORT).show();
+                    String na= snapshot.child("price").getValue().toString();
+                    storageReference = FirebaseStorage.getInstance().getReference("images/"+pr);
+                    try {
+                        File localfile = File.createTempFile("tempfile",".jpeg");
+                        storageReference.getFile(localfile)
+                                .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                                    @Override
+                                    public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                                        bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
+                                        temp.add(new data(pr,na,bitmap));
+                                        if(bitmap!=null) {
+                                            Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
+                                            myAdapter.notifyDataSetChanged();
+                                        }
+                                        else
+                                            Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
+                                    }
+                                }).addOnFailureListener(new OnFailureListener() {
+                                    @Override
+                                    public void onFailure(@NonNull Exception e) {
+                                        Toast.makeText(getApplicationContext(),"undone",Toast.LENGTH_SHORT).show();
 
-            try {
-                File localfile = File.createTempFile("tempfile",".jpeg");
-                storageReference.getFile(localfile)
-                        .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-                            @Override
-                            public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
-                                temp.add(new data("drug","price",bitmap));
-                                if(bitmap!=null) {
-                                    Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
-                                    myAdapter.notifyDataSetChanged();
-                                }
-                                else
-                                    Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
-                            }
-                        }).addOnFailureListener(new OnFailureListener() {
-                            @Override
-                            public void onFailure(@NonNull Exception e) {
-                                Toast.makeText(getApplicationContext(),"undone",Toast.LENGTH_SHORT).show();
+                                    }
+                                });
 
-                            }
-                        });
+                    } catch (IOException e) {
+                        Toast.makeText(getApplicationContext(),"catch",Toast.LENGTH_SHORT).show();
 
-            } catch (IOException e) {
-                e.printStackTrace();
+                        e.printStackTrace();
+                    }
+
+                }
+
+
             }
 
-       }
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
 
-        //imageView.setImageBitmap(Bitmap.createScaledBitmap(bitmap, 100, 100, false));
+            }
 
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
 
+            }
 
-//        ArrayAdapter<String> adapter = new ArrayAdapter<>(getApplicationContext(), R.layout.list_item, temp);
-//        lv.setAdapter(adapter);
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
 
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError error) {
+                Toast.makeText(getApplicationContext(),"canceld",Toast.LENGTH_SHORT).show();
+
+            }
+        });
 
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -119,8 +147,8 @@ public class MainActivity extends AppCompatActivity {
         uplode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-               /* data data1 = new data(editTextname.getText().toString(), editTextprice.getText().toString());
-                myref.push().setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
+                data data1 = new data(editTextname.getText().toString(), editTextprice.getText().toString());
+                reference.setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
                         Toast.makeText(getApplicationContext(), "added sucssesfuly", Toast.LENGTH_SHORT).show();
@@ -131,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), "added Failed", Toast.LENGTH_SHORT).show();
                     }
                 });
-                adapter.notifyDataSetChanged();*/
+                myAdapter.notifyDataSetChanged();
 
                 uplodeimage();
             }
@@ -181,9 +209,8 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setTitle("Uploding file");
         progressDialog.show();
         String filename = editTextname.getText().toString();//format.format(now);
-
-       storageReference= FirebaseStorage.getInstance().getReference("images/"+filename);
-       storageReference.putFile(selectedimg)
+        storageReference= FirebaseStorage.getInstance().getReference("images/"+filename);
+        storageReference.putFile(selectedimg)
                .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                    @Override
                    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
