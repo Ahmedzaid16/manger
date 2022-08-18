@@ -47,6 +47,10 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     ArrayList<data> temp = new ArrayList<>();
+    private static String[] temp2 = new String[10];
+    private static String[] temp3 = new String[10];
+    String[] tem4 = new String[10];
+    int adap=0;
     EditText editTextname;
     EditText editTextprice;
     ImageView imageView;
@@ -62,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
         /*if (savedInstanceState != null) {
             temp = savedInstanceState.getStringArrayList("drug");
         }*/
+        tem4[0]="right";
         setContentView(R.layout.activity_main);
         editTextname = findViewById(R.id.name);
         editTextprice = findViewById(R.id.price);
@@ -70,47 +75,17 @@ public class MainActivity extends AppCompatActivity {
         lv = findViewById(R.id.listview);
         customListView myAdapter = new customListView(temp);
         lv.setAdapter(myAdapter);
-        DatabaseReference reference = FirebaseDatabase.getInstance().getReference().child("data1");
+        DatabaseReference reference = FirebaseDatabase.getInstance().getReference("data1");
         reference.addChildEventListener(new ChildEventListener() {
             @Override
-            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
-                for (DataSnapshot snapshot : dataSnapshot.getChildren()) {
-                    //data d =
-                    String pr= snapshot.child("name").getValue().toString();
-                    Toast.makeText(getApplicationContext(), pr, Toast.LENGTH_SHORT).show();
-                    String na= snapshot.child("price").getValue().toString();
-                    storageReference = FirebaseStorage.getInstance().getReference("images/"+pr);
-                    try {
-                        File localfile = File.createTempFile("tempfile",".jpeg");
-                        storageReference.getFile(localfile)
-                                .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-                                    @Override
-                                    public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                        bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
-                                        temp.add(new data(pr,na,bitmap));
-                                        if(bitmap!=null) {
-                                            Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
-                                            myAdapter.notifyDataSetChanged();
-                                        }
-                                        else
-                                            Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
-                                    }
-                                }).addOnFailureListener(new OnFailureListener() {
-                                    @Override
-                                    public void onFailure(@NonNull Exception e) {
-                                        Toast.makeText(getApplicationContext(),"undone",Toast.LENGTH_SHORT).show();
-
-                                    }
-                                });
-
-                    } catch (IOException e) {
-                        Toast.makeText(getApplicationContext(),"catch",Toast.LENGTH_SHORT).show();
-
-                        e.printStackTrace();
-                    }
-
-                }
-
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                //for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
+                    data d = snapshot.getValue(data.class);
+                    temp2[adap]=d.getName();
+                    temp3[adap]=d.getPrice();
+                    //Toast.makeText(getApplicationContext(),temp2[adap], Toast.LENGTH_SHORT).show();
+                    adap++;
+                    myAdapter.notifyDataSetChanged();
 
             }
 
@@ -131,11 +106,55 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onCancelled(@NonNull DatabaseError error) {
-                Toast.makeText(getApplicationContext(),"canceld",Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "error", Toast.LENGTH_SHORT).show();
 
             }
         });
+        //if (adap==0) {
+            for (int i = 0; i <= 1; i++) {
+                String tem = temp2[i];
+                    /*//data d = dataSnapshot.getValue(data.class);
+                    //String key = reference.child("data1").push().getKey();
+                    //temp.add(d);
+                     //String na= dataSnapshot1.child(key).child("name").getValue().toString();
+                     //String pr= dataSnapshot1.child(key).child("price").getValue().toString();
+                    //Toast.makeText(getApplicationContext(),na, Toast.LENGTH_SHORT).show();*/
 
+                storageReference = FirebaseStorage.getInstance().getReference("images/"+tem);
+                try {
+                    File localfile = File.createTempFile("tempfile", ".jpg");
+                    int finalI = i;
+                    storageReference.getFile(localfile)
+                            .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                                @Override
+                                public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                                    bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
+                                    temp.add(new data(temp2[finalI], temp3[finalI], bitmap));
+                                    if (bitmap != null) {
+                                        Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
+                                        myAdapter.notifyDataSetChanged();
+                                    } else
+                                        Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
+                                }
+                            }).addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Toast.makeText(getApplicationContext(), "undone", Toast.LENGTH_SHORT).show();
+
+                                }
+                            });
+
+                } catch (IOException e) {
+                    Toast.makeText(getApplicationContext(), "catch", Toast.LENGTH_SHORT).show();
+
+                    e.printStackTrace();
+                }
+
+            }
+
+       // }
+         //  else
+          //  Toast.makeText(getApplicationContext(), "Empty", Toast.LENGTH_SHORT).show();
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -148,7 +167,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 data data1 = new data(editTextname.getText().toString(), editTextprice.getText().toString());
-                reference.setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
+                reference.push().setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
                         Toast.makeText(getApplicationContext(), "added sucssesfuly", Toast.LENGTH_SHORT).show();
@@ -164,6 +183,11 @@ public class MainActivity extends AppCompatActivity {
                 uplodeimage();
             }
         });
+
+
+
+
+
 
     }
     class customListView extends BaseAdapter {
