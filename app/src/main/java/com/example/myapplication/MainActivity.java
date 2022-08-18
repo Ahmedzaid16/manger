@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Formatter;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
     ArrayList<data> temp = new ArrayList<>();
@@ -58,12 +59,10 @@ public class MainActivity extends AppCompatActivity {
     StorageReference storageReference;
     ProgressDialog progressDialog;
     Bitmap bitmap;
+    int adap=0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        /*if (savedInstanceState != null) {
-            temp = savedInstanceState.getStringArrayList("drug");
-        }*/
         setContentView(R.layout.activity_main);
         editTextname = findViewById(R.id.name);
         editTextprice = findViewById(R.id.price);
@@ -74,17 +73,52 @@ public class MainActivity extends AppCompatActivity {
         lv.setAdapter(myAdapter);
         DatabaseReference reference = FirebaseDatabase.getInstance().getReference("data1");
         reference.addChildEventListener(new ChildEventListener() {
-            int adap=0;
+
             @Override
             public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
-                //for (DataSnapshot dataSnapshot : snapshot.getChildren()) {
                     data d = snapshot.getValue(data.class);
                     temp2[adap] = d.getName();
                     temp3[adap] = d.getPrice();
-                    //Toast.makeText(getApplicationContext(),temp2[adap], Toast.LENGTH_SHORT).show();
-                    adap++;
                     myAdapter.notifyDataSetChanged();
-                //}
+                    if (temp3[adap] != null) {
+                        try {
+                            TimeUnit.MILLISECONDS.sleep(1400);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        storageReference = FirebaseStorage.getInstance().getReference("images/" + d.getName());
+                        try {
+                            File localfile = File.createTempFile("tempfile", ".jpg");
+                            storageReference.getFile(localfile)
+                                    .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                                        @Override
+                                        public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                                            bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
+                                            temp.add(new data(d.getName(), d.getPrice(), bitmap));
+                                            adap++;
+                                            if (bitmap != null) {
+                                                Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
+                                                myAdapter.notifyDataSetChanged();
+                                            } else
+                                                Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
+                                        }
+                                    }).addOnFailureListener(new OnFailureListener() {
+                                        @Override
+                                        public void onFailure(@NonNull Exception e) {
+                                            Toast.makeText(getApplicationContext(), "undone", Toast.LENGTH_SHORT).show();
+
+                                        }
+                                    });
+
+                        } catch (IOException e) {
+                            Toast.makeText(getApplicationContext(), "catch", Toast.LENGTH_SHORT).show();
+
+                            e.printStackTrace();
+                        }
+                    } else
+                        Toast.makeText(getApplicationContext(), "fish waqt fish waqt fish waqt", Toast.LENGTH_SHORT).show();
+                    myAdapter.notifyDataSetChanged();
+
             }
 
             @Override
@@ -108,45 +142,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        //if (adap==0) {
-            for (int i = 0; i <= 1; i++) {
-                //String tem = temp2[i];
-                //Toast.makeText(getApplicationContext(),temp2[i], Toast.LENGTH_SHORT).show();
-                storageReference = FirebaseStorage.getInstance().getReference("images/"+temp2[i]);
-                try {
-                    File localfile = File.createTempFile("tempfile", ".jpg");
-                    int finalI = i;
-                    storageReference.getFile(localfile)
-                            .addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
-                                @Override
-                                public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
-                                    bitmap = BitmapFactory.decodeFile(localfile.getAbsolutePath());
-                                    temp.add(new data(temp2[finalI], temp3[finalI], bitmap));
-                                    if (bitmap != null) {
-                                        Toast.makeText(getApplicationContext(), "done", Toast.LENGTH_SHORT).show();
-                                        myAdapter.notifyDataSetChanged();
-                                    } else
-                                        Toast.makeText(getApplicationContext(), "empty", Toast.LENGTH_SHORT).show();
-                                }
-                            }).addOnFailureListener(new OnFailureListener() {
-                                @Override
-                                public void onFailure(@NonNull Exception e) {
-                                    Toast.makeText(getApplicationContext(), "undone", Toast.LENGTH_SHORT).show();
 
-                                }
-                            });
-
-                } catch (IOException e) {
-                    Toast.makeText(getApplicationContext(), "catch", Toast.LENGTH_SHORT).show();
-
-                    e.printStackTrace();
-                }
-
-            }
-
-       // }
-         //  else
-          //  Toast.makeText(getApplicationContext(), "Empty", Toast.LENGTH_SHORT).show();
         imageView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -158,21 +154,26 @@ public class MainActivity extends AppCompatActivity {
         uplode.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                data data1 = new data(editTextname.getText().toString(), editTextprice.getText().toString());
-                reference.push().setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
+                if(selectedimg!= null)
+                {
+                    data data1 = new data(editTextname.getText().toString(), editTextprice.getText().toString());
+                    reference.push().setValue(data1).addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
                         Toast.makeText(getApplicationContext(), "added sucssesfuly", Toast.LENGTH_SHORT).show();
                     }
-                }).addOnFailureListener(new OnFailureListener() {
+                 }).addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         Toast.makeText(getApplicationContext(), "added Failed", Toast.LENGTH_SHORT).show();
                     }
-                });
-                myAdapter.notifyDataSetChanged();
+                 });
+                 myAdapter.notifyDataSetChanged();
+                    uplodeimage();
+                }
+                else
+                    Toast.makeText(getApplicationContext(), "pick image first", Toast.LENGTH_SHORT).show();
 
-                uplodeimage();
             }
         });
 
